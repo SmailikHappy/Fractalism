@@ -1,0 +1,70 @@
+{
+    "Collision margin": {
+        "type": "number",
+        "value": 0.10000000149011612
+    },
+    "Dungeon height": {
+        "type": "number",
+        "value": 66.0
+    },
+    "Dungeon width": {
+        "type": "number",
+        "value": 106.0
+    },
+    "Horizontal dungeon partition": {
+        "type": "number",
+        "value": 5.0
+    },
+    "Max room size": {
+        "type": "number",
+        "value": 12.0
+    },
+    "Min room size": {
+        "type": "number",
+        "value": 4.0
+    },
+    "Min room spawn distance": {
+        "type": "number",
+        "value": 2.2699999809265137
+    },
+    "Player speed": {
+        "type": "number",
+        "value": 75.0
+    },
+    "Relative camera scale": {
+        "type": "number",
+        "value": 11.970000267028809
+    },
+    "Render empty": {
+        "type": "bool",
+        "value": true
+    },
+    "Room size": {
+        "type": "number",
+        "value": 5.0
+    },
+    "Room spawn probability": {
+        "type": "number",
+        "value": 0.7900000214576721
+    },
+    "Spawn padding restriction rule": {
+        "type": "number",
+        "value": 4.0
+    },
+    "Tile height": {
+        "type": "number",
+        "value": 16.0
+    },
+    "Tile width": {
+        "type": "number",
+        "value": 16.0
+    },
+    "Turn probability": {
+        "type": "number",
+        "value": 0.30000001192092896
+    },
+    "Vertical dungeon partition": {
+        "type": "number",
+        "value": 3.0
+    }
+}
