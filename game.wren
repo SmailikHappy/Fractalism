@@ -17,6 +17,7 @@ class Game {
         System.print("ahhahaha")
 
         __random = Random.new()
+        CollisionHandler.initialize()
 
         __sprite_list = List.filled(EnumTile.COUNT, EnumTile.empty)
 
@@ -48,8 +49,6 @@ class Game {
         handle_input(dt)
         handle_collisions(dt)
 
-        System.print(__dungeon.get_tiled_from_world_pos(__player.pos, 0))
-
         __camera.pos = __player.pos
         __camera.scale = __player.scale * Data.getNumber("Relative camera scale", Data.game)
         __player.speed = Data.getNumber("Player speed", Data.game)
@@ -59,7 +58,9 @@ class Game {
 
         render_dungeon(0)
 
-        draw_collisions()
+        if (Data.getBool("Draw colliders", Data.game)) {
+            CollisionHandler.draw_colliders(__camera)
+        }
     }
 
 
@@ -178,26 +179,5 @@ class Game {
                 }
             }
         }
-    }
-
-
-
-
-
-    static draw_collisions() {
-        draw_collision_box(__player.pos, __player.collider)
-    }
-
-    static draw_collision_box(pos, collider) {
-        // In have to revert X and Y, something went wrong with sprite rendering.....
-
-        var collision_to_draw_from = __camera.apply_translation(-pos - collider.size / 2)
-        var collision_to_draw_to   = __camera.apply_translation(-pos + collider.size / 2)
-
-
-        Render.dbgLine(collision_to_draw_from.x, collision_to_draw_from.y, collision_to_draw_from.x, collision_to_draw_to.y)
-        Render.dbgLine(collision_to_draw_from.x, collision_to_draw_from.y, collision_to_draw_to.x, collision_to_draw_from.y)
-        Render.dbgLine(collision_to_draw_to.x, collision_to_draw_to.y, collision_to_draw_from.x, collision_to_draw_to.y)
-        Render.dbgLine(collision_to_draw_to.x, collision_to_draw_to.y, collision_to_draw_to.x, collision_to_draw_from.y)
     }
 }

@@ -1,7 +1,15 @@
 {
+    "Collision draw overlap only": {
+        "type": "bool",
+        "value": true
+    },
     "Collision margin": {
         "type": "number",
         "value": 0.10000000149011612
+    },
+    "Draw colliders": {
+        "type": "bool",
+        "value": true
     },
     "Dungeon height": {
         "type": "number",
