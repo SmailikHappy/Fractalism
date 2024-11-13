@@ -4,10 +4,10 @@ import "xs" for Input, Render, Data
 import "xs_math" for Vec2, Math, Color
 import "random" for Random
 import "camera" for Camera
-import "characters" for Player, Zombie, PlayerStates
+import "characters" for Player, Zombie
 import "dungeon" for DungeonFractalElement, Grid
 import "modded_sprite" for ModdedSprite
-import "enums" for EnumTile
+import "enums" for EnumTile, PlayerState, ZombieState
 import "collision" for BoxCollider, CollisionResult, CollisionHandler
 
 class Game {
@@ -46,8 +46,8 @@ class Game {
 
         update_variables(dt)
         handle_input(dt)
-        handle_collisions_with_geometry(dt)
         update_characters(dt)
+        handle_collisions_with_geometry(dt)
 
         __camera.pos = __player.pos
         __camera.scale = __player.scale * Data.getNumber("Relative camera scale", Data.game)
@@ -65,14 +65,21 @@ class Game {
     }
 
     static update_variables(dt) {
-        __player.state = PlayerStates.no_attack
+        __player.state = PlayerState.no_attack
 
         __player.prev_pos = Vec2.new(__player.pos.x, __player.pos.y)
-        __zombie.prev_pos = Vec2.new(__zombie.pos.x, __zombie.pos.y)
 
-        //for(zombie in __zombies) {
-        //    ...
-        //}
+        for(zombie in __zombies) {
+            zombie.prev_pos = Vec2.new(zombie.pos.x, zombie.pos.y)
+
+            if (zombie.state == ZombieState.on_cooldown) {
+                zombie.cooldown = zombie.cooldown - dt
+
+                if (zombie.cooldown <= 0.0) {
+                    zombie.state = ZombieState.hanging_around
+                }
+            }
+        }
     }
 
     static handle_input(dt) {        
@@ -101,7 +108,7 @@ class Game {
 
         // Mouse1
         if (Input.getMouseButtonOnce(Input.mouseButtonLeft)) {
-            __player.state = PlayerStates.attack
+            __player.state = PlayerState.attack
         }
     }
 
@@ -109,6 +116,7 @@ class Game {
         var collision_margin = Data.getNumber("Collision margin", Data.game)
 
         var player_tile = __dungeon.get_tiled_from_world_pos(__player.pos, 0)
+
         player_tile = Vec2.new(player_tile.x.floor, player_tile.y.floor)
 
         var wall_collider = BoxCollider.new(16, 16)
@@ -127,6 +135,8 @@ class Game {
         for (offset in offsets_to_check) {
             var x = player_tile.x + offset.x
             var y = player_tile.y + offset.y
+
+            if(!__dungeon.grid.coords_are_valid(x, y)) continue
 
             if (__dungeon.grid[x, y] == EnumTile.wall) {
 
@@ -149,21 +159,75 @@ class Game {
             }
         }
 
+        for (zombie in __zombies) {
+
+            if (!zombie.is_alive) continue
+
+            var zombie_tile = __dungeon.get_tiled_from_world_pos(zombie.pos, 0)
+
+            zombie_tile = Vec2.new(zombie_tile.x.floor, zombie_tile.y.floor)
+
+
+            for (offset in offsets_to_check) {
+                var x = zombie_tile.x + offset.x
+                var y = zombie_tile.y + offset.y
+
+                if(!__dungeon.grid.coords_are_valid(x, y)) continue
+
+                if (__dungeon.grid[x, y] == EnumTile.wall) {
+
+                    var tile_pos = __dungeon.get_world_from_tiled_pos(x + 0.5, y + 0.5, 0)
+                    
+                    var collision_result = CollisionHandler.box_to_box_only_first_contact(zombie.collider, zombie.pos, zombie.prev_pos, wall_collider, tile_pos, tile_pos)
+
+                    if (collision_result == CollisionResult.collider2_bottom) {
+                        zombie.pos.y = tile_pos.y + __dungeon.tile_size.y/2 + zombie.collider.half_size.y + collision_margin
+                    }
+                    if (collision_result == CollisionResult.collider2_top) {
+                        zombie.pos.y = tile_pos.y - __dungeon.tile_size.y/2 - zombie.collider.half_size.y - collision_margin
+                    }
+                    if (collision_result == CollisionResult.collider2_right) {
+                        zombie.pos.x = tile_pos.x - __dungeon.tile_size.x/2 - zombie.collider.half_size.x - collision_margin
+                    }
+                    if (collision_result == CollisionResult.collider2_left) {
+                        zombie.pos.x = tile_pos.x + __dungeon.tile_size.x/2 + zombie.collider.half_size.x + collision_margin
+                    }
+                }
+            }
+        }
         
     }
 
     static update_characters(dt) {
-        if ((__zombie.pos - __player.pos).magnitude <= 20.0) {
-            System.print("Zombie attacks")
-        }
 
-        if (__player.state == PlayerStates.attack && (__zombie.pos - __player.pos).magnitude <= 30) {
-            __zombie.receive_dmg(20)
-        }
+        var zombie_view_distance = Data.getNumber("Zombie view distance", Data.game)
+        
+        for (zombie in __zombies) {
+            if (!zombie.is_alive) continue
 
-        if (!__zombie.is_alive) {
-            System.print("Zombie is dead")
+            // Player detection
+            if ((zombie.pos - __player.pos).magnitude <= 20.0) {
+                zombie.state = ZombieState.on_cooldown
+                zombie.cooldown = Data.getNumber("Zombie cooldown attack", Data.game)
+            }
+
+            // Approach to the player
+            var zombie_to_player_vector = __player.pos - zombie.pos
+            if (zombie.state == ZombieState.hanging_around && zombie_to_player_vector.magnitude <= zombie_view_distance) {
+                zombie.pos = zombie.pos + zombie_to_player_vector.normal * zombie.speed * dt
+            }
+
+            // Damage receive from the player
+            if (__player.state == PlayerState.attack && (zombie.pos - __player.pos).magnitude <= 30) {
+                zombie.receive_dmg(20)
+            }
+
+            // is being killed?
+            if (!zombie.is_alive) {
+                zombie.sprite_info.mul = Color.new(255, 0, 0).toNum
+            }
         }
+        
     }
 
     static init_life(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows) {
@@ -172,23 +236,29 @@ class Game {
             1.0,
             Data.getNumber("Player speed", Data.game),
             0,
-            BoxCollider.new(Vec2.new(4, 8)),
+            BoxCollider.new(Vec2.new(12, 12)),
             ModdedSprite.new(Render.createGridSprite(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows, 26, 0), Color.new(255, 255, 255, 255).toNum, 0x00, Render.spriteCenter)
         )
 
 
         Zombie.set_defaults(
-            BoxCollider.new(Vec2.new(8, 8)),
+            BoxCollider.new(Vec2.new(16, 16)),
             20,
-            20.0,
+            Data.getNumber("Player speed", Data.game) * 0.6,
             1.0,
             ModdedSprite.new(Render.createGridSprite(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows, 25, 2), Color.new(255, 255, 255, 255).toNum, 0x00, Render.spriteCenter)
         )
 
-        __zombie = Zombie.new(
-            __dungeon.get_world_from_tiled_pos(10, 10, 0),
-            1.0
-        )
+        __zombies = []
+
+        for (i in 1..3) {
+            var new_zombie = Zombie.new(
+                __dungeon.get_world_from_tiled_pos(10 * i, 10 * i, 0),
+                1.0
+            )
+
+            __zombies.add(new_zombie)
+        }
     }
 
     static render_dungeon(i) {
@@ -255,21 +325,23 @@ class Game {
             Render.spriteCenter
         )
 
-        var zombie_sprite_info =__zombie.sprite_info
-        var zombie_render_pos = __camera.apply_translation(-__zombie.pos)
-        var zombie_render_scale = __camera.apply_scale(__zombie.scale)
+        for (zombie in __zombies) {
+            var zombie_sprite_info = zombie.sprite_info
+            var zombie_render_pos = __camera.apply_translation(-zombie.pos)
+            var zombie_render_scale = __camera.apply_scale(zombie.scale)
 
-        // Render zombies
-        Render.sprite(
-            zombie_sprite_info.sprite,
-            zombie_render_pos.x,
-            zombie_render_pos.y,
-            1,
-            zombie_render_scale,
-            0.0,
-            zombie_sprite_info.mul,
-            zombie_sprite_info.add,
-            Render.spriteCenter
-        )
+            // Render zombies
+            Render.sprite(
+                zombie_sprite_info.sprite,
+                zombie_render_pos.x,
+                zombie_render_pos.y,
+                1,
+                zombie_render_scale,
+                0.0,
+                zombie_sprite_info.mul,
+                zombie_sprite_info.add,
+                Render.spriteCenter
+            )
+        }
     }
 }

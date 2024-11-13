@@ -74,5 +74,13 @@
     "Vertical dungeon partition": {
         "type": "number",
         "value": 3.0
+    },
+    "Zombie cooldown attack": {
+        "type": "number",
+        "value": 2.0
+    },
+    "Zombie view distance": {
+        "type": "number",
+        "value": 100.0
     }
 }

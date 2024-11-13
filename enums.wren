@@ -12,3 +12,14 @@ class EnumTile {
         return false
     }
 }
+
+class PlayerState {
+    static attack       { 0 }
+    static no_attack    { 1 }
+}
+
+class ZombieState {
+    static attack           { 0 }
+    static on_cooldown      { 1 }
+    static hanging_around   { 2 }
+}

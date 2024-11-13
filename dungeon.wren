@@ -75,6 +75,14 @@ class Grid {
     /// The number of rows in the grid.
     height { _height }
 
+    coords_are_valid(x, y) {
+        if (x >= width || y >= height || x < 0 || y < 0) {
+            return false
+        } else {
+            return true
+        }
+    }
+
     /// Returns the value stored at the given grid cell.    
     [x, y] {
         if (x >= width || y >= height || x < 0 || y < 0) {
