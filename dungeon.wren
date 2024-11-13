@@ -115,6 +115,8 @@ class DungeonFractalElement {
 
         _tile_size = Vec2.new(Data.getNumber("Tile width", Data.game), Data.getNumber("Tile height", Data.game))
 
+        _npc_spawn_tiles = []
+        _player_spawn_tile = Vec2.new(0, 0)
         _grid = generate_dungeon_grid(dungeon_size_x, dungeon_size_y, random)
 
         _grid[0, 0] = EnumTile.wall
@@ -122,7 +124,7 @@ class DungeonFractalElement {
         _dungeon_entrance_point = Vec2.new(dungeon_entrance_point.x * _tile_size.x, dungeon_entrance_point.y * _tile_size.y)
         _dungeon_exit_point = Vec2.new(dungeon_exit_point.x * _tile_size.x, dungeon_exit_point.y * _tile_size.y)
 
-        _size = Vec2.new(_grid.width * 16, _grid.height * 16)
+        _size = Vec2.new(_grid.width * _tile_size.x, _grid.height * _tile_size.y)
     }
 
     /*static*/ generate_dungeon_grid(dungeon_size_x, dungeon_size_y, random) {
@@ -162,12 +164,36 @@ class DungeonFractalElement {
                 rooms.add(DungeonRoom.new(room_corner_pos, room_size))
             }
         }
-        
+
         // mark grid tiles that are a room tiles
         for (room in rooms) {
             for (x in 0..room.size.x - 1) {
                 for (y in 0..room.size.y - 1) {
                     grid[room.corner_pos.x + x, room.corner_pos.y + y] = EnumTile.floor2
+                }
+            }
+
+            // Looking for NPC potential spawn positions
+            var number_of_npcs_to_spawn = Data.getNumber("NPC spawnrate", Data.game) * room.size.x * room.size.y
+
+            for (i in 1..number_of_npcs_to_spawn) {
+
+                var npc_spawn_found = false
+                while(!npc_spawn_found) {
+                    var potential_spawn_tile = room.corner_pos + Vec2.new(random.int(0, room.size.x), random.int(0, room.size.y))
+
+                    var npc_cant_spawn_here = false
+                    for (spawn_tile in _npc_spawn_tiles) {
+
+                        if (spawn_tile == potential_spawn_tile) {
+                            npc_cant_spawn_here = true
+                        }
+                    }
+
+                    if (!npc_cant_spawn_here) {
+                        _npc_spawn_tiles.add(potential_spawn_tile)
+                        npc_spawn_found = true
+                    }
                 }
             }
         }
@@ -180,6 +206,11 @@ class DungeonFractalElement {
         walker_walked_in_rooms_ids.add(room_start_id)
 
         rooms[room_start_id].was_reached_by_walker = true
+        _player_spawn_tile = Vec2.new(
+            random.int(rooms[room_start_id].corner_pos.x, rooms[room_start_id].corner_pos.x + rooms[room_start_id].size.x),
+            random.int(rooms[room_start_id].corner_pos.y, rooms[room_start_id].corner_pos.y + rooms[room_start_id].size.y)
+        )
+
 
         // a pre last room will connect the last room, so no more rooms to connect when the last room will be reached in the loop
         for(i in 0..rooms.count-2) {
@@ -291,6 +322,8 @@ class DungeonFractalElement {
     tile_size { _tile_size }
 
     grid { _grid }
+    npc_spawn_tiles { _npc_spawn_tiles }
+    player_spawn_tile { _player_spawn_tile }
 
     get_world_from_tiled_pos(grid_x, grid_y, dungeon_level) {
 

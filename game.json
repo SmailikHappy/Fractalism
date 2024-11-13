@@ -35,6 +35,14 @@
         "type": "number",
         "value": 2.2699999809265137
     },
+    "NPC spawnrate": {
+        "type": "number",
+        "value": 0.09000000357627869
+    },
+    "Player spawn protection": {
+        "type": "number",
+        "value": 200.0
+    },
     "Player speed": {
         "type": "number",
         "value": 75.0

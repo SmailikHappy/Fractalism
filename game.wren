@@ -232,7 +232,7 @@ class Game {
 
     static init_life(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows) {
         __player = Player.new(
-            __dungeon.get_world_from_tiled_pos(0, 0, 0),
+            __dungeon.get_world_from_tiled_pos(__dungeon.player_spawn_tile.x + 0.5, __dungeon.player_spawn_tile.y + 0.5, 0),
             1.0,
             Data.getNumber("Player speed", Data.game),
             0,
@@ -242,7 +242,7 @@ class Game {
 
 
         Zombie.set_defaults(
-            BoxCollider.new(Vec2.new(16, 16)),
+            BoxCollider.new(Vec2.new(12, 12)),
             20,
             Data.getNumber("Player speed", Data.game) * 0.6,
             1.0,
@@ -251,11 +251,14 @@ class Game {
 
         __zombies = []
 
-        for (i in 1..3) {
+        for (spawn_tile in __dungeon.npc_spawn_tiles) {
+
             var new_zombie = Zombie.new(
-                __dungeon.get_world_from_tiled_pos(10 * i, 10 * i, 0),
+                __dungeon.get_world_from_tiled_pos(spawn_tile.x + 0.5, spawn_tile.y + 0.5, 0),
                 1.0
             )
+
+            if ((new_zombie.pos - __player.pos).magnitude <= Data.getNumber("Player spawn protection", Data.game)) continue
 
             __zombies.add(new_zombie)
         }
