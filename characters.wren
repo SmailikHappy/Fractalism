@@ -17,6 +17,8 @@ class Player {
 
         _previous_pos = pos
         _state = PlayerState.no_attack
+
+        _hp = 100
     }
 
     pos { _pos }
@@ -33,6 +35,10 @@ class Player {
     sprite_info { _sprite_info }
     state { _state }
     state=(v) { _state = v }
+    hp { _hp }
+
+    receive_dmg(v) { _hp = _hp - v }
+    heal(v) { _hp = _hp + v }
 }
 
 class Zombie {

@@ -40,6 +40,9 @@ class Game {
         init_life(tile_set_image, tile_set_columns, tile_set_rows)
 
         __screen_resolution = Vec2.new(Data.getNumber("Width", Data.system), Data.getNumber("Height", Data.system))
+
+        __font = Render.loadFont("[game]/assets/FutilePro.ttf", 28)
+        __ui_background = Render.createGridSprite(tile_set_image, tile_set_columns, tile_set_rows, 8, 5)
     }    
 
     static update(dt) {
@@ -49,7 +52,7 @@ class Game {
         update_characters(dt)
         handle_collisions_with_geometry(dt)
 
-        __camera.pos = __player.pos
+        __camera.pos = Math.lerp(__camera.pos, __player.pos, dt * Data.getNumber("Camera attachment force", Data.game))
         __camera.scale = __player.scale * Data.getNumber("Relative camera scale", Data.game)
         __player.speed = Data.getNumber("Player speed", Data.game)
     }
@@ -58,6 +61,7 @@ class Game {
 
         render_dungeon(0)
         render_life()
+        render_ui()
 
         if (Data.getBool("Draw colliders", Data.game)) {
             CollisionHandler.draw_colliders(__camera)
@@ -205,8 +209,11 @@ class Game {
         for (zombie in __zombies) {
             if (!zombie.is_alive) continue
 
-            // Player detection
-            if ((zombie.pos - __player.pos).magnitude <= 20.0) {
+            // Zombie attack
+            if (CollisionHandler.box_to_box_are_overlapping(__player.collider, __player.pos, zombie.collider, zombie.pos) == CollisionResult.overlap &&
+                zombie.state == ZombieState.hanging_around) {
+                
+                __player.receive_dmg(zombie.dmg)
                 zombie.state = ZombieState.on_cooldown
                 zombie.cooldown = Data.getNumber("Zombie cooldown attack", Data.game)
             }
@@ -228,9 +235,13 @@ class Game {
             }
         }
         
+        if (__player.hp <= 0) {
+            Game.initialize()
+        }
     }
 
     static init_life(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows) {
+
         __player = Player.new(
             __dungeon.get_world_from_tiled_pos(__dungeon.player_spawn_tile.x + 0.5, __dungeon.player_spawn_tile.y + 0.5, 0),
             1.0,
@@ -346,5 +357,16 @@ class Game {
                 Render.spriteCenter
             )
         }
+    }
+
+    static render_ui() {
+
+        var background_height = (Data.getNumber("UI Height", Data.game) * 100 - Data.getNumber("Height", Data.system)) 
+        var text_offset = Data.getNumber("UI Text offset", Data.game) * 100
+
+        Render.sprite(__ui_background, 0, background_height, 3, 20, 0, Color.new(75, 75, 75, 220).toNum, 0, Render.spriteCenter)
+
+        var message = "Health: %(__player.hp)"
+        Render.text(__font, message, 0, background_height + text_offset, 4.0, 0xFFFFFFFF, 0x0, Render.spriteCenter)
     }
 }

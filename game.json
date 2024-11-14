@@ -1,4 +1,8 @@
 {
+    "Camera attachment force": {
+        "type": "number",
+        "value": 8.0
+    },
     "Collision draw overlap only": {
         "type": "bool",
         "value": true
@@ -78,6 +82,14 @@
     "Turn probability": {
         "type": "number",
         "value": 0.30000001192092896
+    },
+    "UI Height": {
+        "type": "number",
+        "value": 3.25
+    },
+    "UI Text offset": {
+        "type": "number",
+        "value": 1.2000000476837158
     },
     "Vertical dungeon partition": {
         "type": "number",
