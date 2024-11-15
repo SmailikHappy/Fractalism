@@ -4,6 +4,7 @@ import "random" for Random
 import "camera" for Camera
 import "modded_sprite" for ModdedSprite
 import "enums" for PlayerState, ZombieState
+import "collision" for BoxCollider
 
 
 class Player {
@@ -55,20 +56,23 @@ class Zombie {
             __default_sprite_info.add,
             __default_sprite_info.flags
         )
+
+        _collider = BoxCollider.new(
+            __default_collider.size.x * scale,
+            __default_collider.size.y * scale
+        )
+
+        _dmg = __dmg * scale
+        _speed = __speed * scale
     }
 
-    static set_defaults(collider, max_hp, speed, dmg, sprite_info) {
-        __collider = collider
+    static set_defaults(default_collider, max_hp, speed, dmg, sprite_info) {
+        __default_collider = default_collider
         __max_hp = max_hp
         __speed = speed
         __dmg = dmg
         __default_sprite_info = sprite_info
     }
-
-// Accessing defaults
-    collider { __collider }
-    dmg { __dmg }
-    speed { __speed }
 
 // Getters/setters
     pos { _pos }
@@ -81,6 +85,9 @@ class Zombie {
     state=(v) { _state = v }
     cooldown { _cooldown }
     cooldown=(v) { _cooldown = v }
+    collider { _collider }
+    dmg { _dmg }
+    speed { _speed }
 
 // Interaction
     receive_dmg(damage) {

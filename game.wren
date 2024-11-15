@@ -35,7 +35,7 @@ class Game {
 
         __camera = Camera.new(Vec2.new(0,0), 1.0)
 
-        __dungeon = DungeonFractalElement.new(Vec2.new(0, -1.5), Vec2.new(-4, -2.5), 2, dungeon_width, dungeon_height, __random)
+        __dungeon = DungeonFractalElement.new(2, dungeon_width, dungeon_height, __random)
 
         init_life(tile_set_image, tile_set_columns, tile_set_rows)
 
@@ -43,6 +43,10 @@ class Game {
 
         __font = Render.loadFont("[game]/assets/FutilePro.ttf", 28)
         __ui_background = Render.createGridSprite(tile_set_image, tile_set_columns, tile_set_rows, 8, 5)
+
+        __max_dungeon_level_reached = 0
+
+        calculate_dungeon_colliders(0)
     }    
 
     static update(dt) {
@@ -51,6 +55,7 @@ class Game {
         handle_input(dt)
         update_characters(dt)
         handle_collisions_with_geometry(dt)
+        update_present_dungeon_level()
 
         __camera.pos = Math.lerp(__camera.pos, __player.pos, dt * Data.getNumber("Camera attachment force", Data.game))
         __camera.scale = __player.scale * Data.getNumber("Relative camera scale", Data.game)
@@ -59,9 +64,14 @@ class Game {
 
     static render() {
 
-        render_dungeon(0)
+        if (__player.dungeon_level != 0) {
+            render_dungeon(__player.dungeon_level - 1)
+        }
+        render_dungeon(__player.dungeon_level)
+        render_dungeon(__player.dungeon_level + 1)
         render_life()
         render_ui()
+
 
         if (Data.getBool("Draw colliders", Data.game)) {
             CollisionHandler.draw_colliders(__camera)
@@ -119,11 +129,6 @@ class Game {
     static handle_collisions_with_geometry(dt) {
         var collision_margin = Data.getNumber("Collision margin", Data.game)
 
-        var player_tile = __dungeon.get_tiled_from_world_pos(__player.pos, 0)
-
-        player_tile = Vec2.new(player_tile.x.floor, player_tile.y.floor)
-
-        var wall_collider = BoxCollider.new(16, 16)
 
         var offsets_to_check = [
             Vec2.new(0, 1),
@@ -136,65 +141,78 @@ class Game {
             Vec2.new(-1, -1),
         ]
 
-        for (offset in offsets_to_check) {
-            var x = player_tile.x + offset.x
-            var y = player_tile.y + offset.y
+        for (dungeon_lvl in (__player.dungeon_level-1)..(__player.dungeon_level+1)) {
 
-            if(!__dungeon.grid.coords_are_valid(x, y)) continue
+            if (dungeon_lvl < 0) continue
 
-            if (__dungeon.grid[x, y] == EnumTile.wall) {
+            var player_tile = __dungeon.get_tiled_from_world_pos(__player.pos, dungeon_lvl)
 
-                var tile_pos = __dungeon.get_world_from_tiled_pos(x + 0.5, y + 0.5, 0)
-                
-                var collision_result = CollisionHandler.box_to_box_only_first_contact(__player.collider, __player.pos, __player.prev_pos, wall_collider, tile_pos, tile_pos)
+            player_tile = Vec2.new(player_tile.x.floor, player_tile.y.floor)
 
-                if (collision_result == CollisionResult.collider2_bottom) {
-                    __player.pos.y = tile_pos.y + __dungeon.tile_size.y/2 + __player.collider.half_size.y + collision_margin
-                }
-                if (collision_result == CollisionResult.collider2_top) {
-                    __player.pos.y = tile_pos.y - __dungeon.tile_size.y/2 - __player.collider.half_size.y - collision_margin
-                }
-                if (collision_result == CollisionResult.collider2_right) {
-                    __player.pos.x = tile_pos.x - __dungeon.tile_size.x/2 - __player.collider.half_size.x - collision_margin
-                }
-                if (collision_result == CollisionResult.collider2_left) {
-                    __player.pos.x = tile_pos.x + __dungeon.tile_size.x/2 + __player.collider.half_size.x + collision_margin
-                }
-            }
-        }
-
-        for (zombie in __zombies) {
-
-            if (!zombie.is_alive) continue
-
-            var zombie_tile = __dungeon.get_tiled_from_world_pos(zombie.pos, 0)
-
-            zombie_tile = Vec2.new(zombie_tile.x.floor, zombie_tile.y.floor)
-
+            var wall_collider = BoxCollider.new(__dungeon.tile_size.x * __dungeon.convertion_scale.pow(dungeon_lvl), __dungeon.tile_size.y * __dungeon.convertion_scale.pow(dungeon_lvl))
 
             for (offset in offsets_to_check) {
-                var x = zombie_tile.x + offset.x
-                var y = zombie_tile.y + offset.y
+                var x = player_tile.x + offset.x
+                var y = player_tile.y + offset.y
 
                 if(!__dungeon.grid.coords_are_valid(x, y)) continue
 
                 if (__dungeon.grid[x, y] == EnumTile.wall) {
 
-                    var tile_pos = __dungeon.get_world_from_tiled_pos(x + 0.5, y + 0.5, 0)
+                    var tile_pos = __dungeon.get_world_from_tiled_pos(x + 0.5, y + 0.5, dungeon_lvl)
                     
-                    var collision_result = CollisionHandler.box_to_box_only_first_contact(zombie.collider, zombie.pos, zombie.prev_pos, wall_collider, tile_pos, tile_pos)
+                    var collision_result = CollisionHandler.box_to_box_only_first_contact(__player.collider, __player.pos, __player.prev_pos, wall_collider, tile_pos, tile_pos)
 
                     if (collision_result == CollisionResult.collider2_bottom) {
-                        zombie.pos.y = tile_pos.y + __dungeon.tile_size.y/2 + zombie.collider.half_size.y + collision_margin
+                        __player.pos.y = tile_pos.y + wall_collider.half_size.y + __player.collider.half_size.y + collision_margin
                     }
                     if (collision_result == CollisionResult.collider2_top) {
-                        zombie.pos.y = tile_pos.y - __dungeon.tile_size.y/2 - zombie.collider.half_size.y - collision_margin
+                        __player.pos.y = tile_pos.y - wall_collider.half_size.y - __player.collider.half_size.y - collision_margin
                     }
                     if (collision_result == CollisionResult.collider2_right) {
-                        zombie.pos.x = tile_pos.x - __dungeon.tile_size.x/2 - zombie.collider.half_size.x - collision_margin
+                        __player.pos.x = tile_pos.x - wall_collider.half_size.x - __player.collider.half_size.x - collision_margin
                     }
                     if (collision_result == CollisionResult.collider2_left) {
-                        zombie.pos.x = tile_pos.x + __dungeon.tile_size.x/2 + zombie.collider.half_size.x + collision_margin
+                        __player.pos.x = tile_pos.x + wall_collider.half_size.y + __player.collider.half_size.x + collision_margin
+                    }
+                }
+            }
+
+            for (zombie in __zombies) {
+
+                if (!zombie.is_alive) continue
+
+                var zombie_tile = __dungeon.get_tiled_from_world_pos(zombie.pos, dungeon_lvl)
+
+                zombie_tile = Vec2.new(zombie_tile.x.floor, zombie_tile.y.floor)
+
+
+                for (offset in offsets_to_check) {
+                    var x = zombie_tile.x + offset.x
+                    var y = zombie_tile.y + offset.y
+
+                    if(!__dungeon.grid.coords_are_valid(x, y)) continue
+
+                    var wall_collider = BoxCollider.new(__dungeon.tile_size.x * __dungeon.convertion_scale.pow(dungeon_lvl), __dungeon.tile_size.y * __dungeon.convertion_scale.pow(dungeon_lvl))
+
+                    if (__dungeon.grid[x, y] == EnumTile.wall) {
+
+                        var tile_pos = __dungeon.get_world_from_tiled_pos(x + 0.5, y + 0.5, dungeon_lvl)
+                        
+                        var collision_result = CollisionHandler.box_to_box_only_first_contact(zombie.collider, zombie.pos, zombie.prev_pos, wall_collider, tile_pos, tile_pos)
+
+                        if (collision_result == CollisionResult.collider2_bottom) {
+                            zombie.pos.y = tile_pos.y + wall_collider.half_size.y + zombie.collider.half_size.y + collision_margin
+                        }
+                        if (collision_result == CollisionResult.collider2_top) {
+                            zombie.pos.y = tile_pos.y - wall_collider.half_size.y - zombie.collider.half_size.y - collision_margin
+                        }
+                        if (collision_result == CollisionResult.collider2_right) {
+                            zombie.pos.x = tile_pos.x - wall_collider.half_size.y - zombie.collider.half_size.x - collision_margin
+                        }
+                        if (collision_result == CollisionResult.collider2_left) {
+                            zombie.pos.x = tile_pos.x + wall_collider.half_size.y + zombie.collider.half_size.x + collision_margin
+                        }
                     }
                 }
             }
@@ -240,6 +258,31 @@ class Game {
         }
     }
 
+    static update_present_dungeon_level() {
+
+        if (__player.dungeon_level == 0) {
+            if (CollisionHandler.box_to_box_are_overlapping(__player.collider, __player.pos, __next_dungeon_collider, __next_dungeon_collider_pos) == CollisionResult.overlap) {
+                __player.dungeon_level = 1
+                calculate_dungeon_colliders(1)
+            }
+        } else {
+            if (CollisionHandler.box_to_box_are_overlapping(__player.collider, __player.pos, __next_dungeon_collider, __next_dungeon_collider_pos) == CollisionResult.overlap) {
+                __player.dungeon_level = __player.dungeon_level + 1
+                calculate_dungeon_colliders(__player.dungeon_level)
+            }
+
+            if (CollisionHandler.box_to_box_are_overlapping(__player.collider, __player.pos, __past_dungeon_collider, __past_dungeon_collider_pos) == CollisionResult.overlap) {
+                __player.dungeon_level = __player.dungeon_level - 1
+                calculate_dungeon_colliders(__player.dungeon_level)
+            }
+        }
+
+        if (__player.dungeon_level > __max_dungeon_level_reached) {
+            spawn_npcs_on_level(__player.dungeon_level + 1)
+            __max_dungeon_level_reached = __player.dungeon_level
+        }
+    }
+
     static init_life(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows) {
 
         __player = Player.new(
@@ -262,17 +305,48 @@ class Game {
 
         __zombies = []
 
+        spawn_npcs_on_level(0)
+        spawn_npcs_on_level(1)
+
+        var npc_ids_to_remove = []
+
+        for (i in 0..__zombies.count-1) {
+            if ((__zombies[i].pos - __player.pos).magnitude <= Data.getNumber("Player spawn protection", Data.game)) {
+                npc_ids_to_remove.insert(0, i)
+            }
+        }
+
+        for (index in npc_ids_to_remove) {
+            __zombies.removeAt(index)
+        }
+    }
+
+    static spawn_npcs_on_level(dungeon_lvl) {
+        var npc_scale = __dungeon.convertion_scale.pow(dungeon_lvl)
+
         for (spawn_tile in __dungeon.npc_spawn_tiles) {
 
             var new_zombie = Zombie.new(
-                __dungeon.get_world_from_tiled_pos(spawn_tile.x + 0.5, spawn_tile.y + 0.5, 0),
-                1.0
+                __dungeon.get_world_from_tiled_pos(spawn_tile.x + 0.5, spawn_tile.y + 0.5, dungeon_lvl),
+                npc_scale
             )
-
-            if ((new_zombie.pos - __player.pos).magnitude <= Data.getNumber("Player spawn protection", Data.game)) continue
 
             __zombies.add(new_zombie)
         }
+    }
+
+    static calculate_dungeon_colliders(reached_dungeon_level) {
+        __next_dungeon_collider = BoxCollider.new(
+            __dungeon.size * __dungeon.convertion_scale.pow(reached_dungeon_level + 1)
+        )
+        __next_dungeon_collider_pos = __dungeon.get_world_from_tiled_pos(__dungeon.grid.width / 2, __dungeon.grid.height / 2, reached_dungeon_level + 1)
+
+        if (reached_dungeon_level == 0) return
+
+        __past_dungeon_collider = BoxCollider.new(
+            __dungeon.size * __dungeon.convertion_scale.pow(reached_dungeon_level - 1)
+        )
+        __past_dungeon_collider_pos = __dungeon.get_world_from_tiled_pos(__dungeon.grid.width / 2, __dungeon.grid.height / 2, reached_dungeon_level - 1)
     }
 
     static render_dungeon(i) {
@@ -283,29 +357,20 @@ class Game {
 
         var dungeon_scale = __dungeon.convertion_scale.pow(i)
 
-        var dungeon_pos = Vec2.new(0, 0)
-        while (i != 0) {
-
-            var temp_dungeon_scale = __dungeon.convertion_scale.pow(i)
-            var temp_prev_dungeon_scale = __dungeon.convertion_scale.pow(i - 1)
-
-            dungeon_pos = dungeon_pos - (__dungeon.dungeon_exit_point * temp_prev_dungeon_scale) + (__dungeon.dungeon_entrance_point * temp_dungeon_scale)
-
-            i = i - 1
-        }
+        var dungeon_pos = -__dungeon.get_world_from_tiled_pos(0, 0, i)
 
         var render_empty = Data.getBool("Render empty", Data.game)
         var tile_render_scale = __camera.apply_scale(dungeon_scale)
 
         for (x in 0..__dungeon.grid.width - 1) {
-            var render_pos_x = __camera.apply_translation(dungeon_pos + Vec2.new(x * __dungeon.tile_size.x * dungeon_scale, 0)).x
+            var render_pos_x = __camera.apply_translation(Vec2.new(dungeon_pos.x + x * __dungeon.tile_size.x * dungeon_scale, 0)).x
 
             if (render_pos_x > -__screen_resolution.x/2 - tile_render_scale*__dungeon.tile_size.x &&
                 render_pos_x < __screen_resolution.x/2) {
                 
                 for (y in 0..__dungeon.grid.height - 1) {
 
-                    var render_pos_y = __camera.apply_translation(dungeon_pos + Vec2.new(0, y * __dungeon.tile_size.y * dungeon_scale)).y
+                    var render_pos_y = __camera.apply_translation(Vec2.new(0, dungeon_pos.y + y * __dungeon.tile_size.y * dungeon_scale)).y
 
                     if (render_pos_y > -__screen_resolution.y/2 - tile_render_scale*__dungeon.tile_size.y &&
                         render_pos_y < __screen_resolution.y/2) {
@@ -344,18 +409,24 @@ class Game {
             var zombie_render_pos = __camera.apply_translation(-zombie.pos)
             var zombie_render_scale = __camera.apply_scale(zombie.scale)
 
-            // Render zombies
-            Render.sprite(
-                zombie_sprite_info.sprite,
-                zombie_render_pos.x,
-                zombie_render_pos.y,
-                1,
-                zombie_render_scale,
-                0.0,
-                zombie_sprite_info.mul,
-                zombie_sprite_info.add,
-                Render.spriteCenter
-            )
+            if (zombie_render_pos.x > -__screen_resolution.x/2 - zombie_render_scale*__dungeon.tile_size.x &&
+                zombie_render_pos.x < __screen_resolution.x/2 &&
+                zombie_render_pos.y > -__screen_resolution.y/2 - zombie_render_scale*__dungeon.tile_size.y &&
+                zombie_render_pos.y < __screen_resolution.y/2) {
+                
+                // Render zombies if they are in camera's frustum
+                Render.sprite(
+                    zombie_sprite_info.sprite,
+                    zombie_render_pos.x,
+                    zombie_render_pos.y,
+                    1,
+                    zombie_render_scale,
+                    0.0,
+                    zombie_sprite_info.mul,
+                    zombie_sprite_info.add,
+                    Render.spriteCenter
+                )
+            }            
         }
     }
 

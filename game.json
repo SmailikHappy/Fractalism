@@ -13,7 +13,7 @@
     },
     "Draw colliders": {
         "type": "bool",
-        "value": true
+        "value": false
     },
     "Dungeon height": {
         "type": "number",
@@ -49,15 +49,15 @@
     },
     "Player speed": {
         "type": "number",
-        "value": 75.0
+        "value": 750.0
     },
     "Relative camera scale": {
         "type": "number",
-        "value": 11.970000267028809
+        "value": 0.6100000143051147
     },
     "Render empty": {
         "type": "bool",
-        "value": true
+        "value": false
     },
     "Room size": {
         "type": "number",

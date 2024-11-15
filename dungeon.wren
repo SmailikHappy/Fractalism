@@ -109,7 +109,7 @@ class DungeonFractalElement {
     // Entrance and Exit poins should be provided in grid's dimension; for example:
     // (0, 0) - left bottom corner of whole grid
     // (0.5, 0.5) - center of left bottom tile
-    construct new(dungeon_entrance_point, dungeon_exit_point, convertion_scale, dungeon_size_x, dungeon_size_y, random) {
+    construct new(convertion_scale, dungeon_size_x, dungeon_size_y, random) {
 
         _convertion_scale = convertion_scale
 
@@ -119,15 +119,10 @@ class DungeonFractalElement {
         _player_spawn_tile = Vec2.new(0, 0)
         _grid = generate_dungeon_grid(dungeon_size_x, dungeon_size_y, random)
 
-        _grid[0, 0] = EnumTile.wall
-
-        _dungeon_entrance_point = Vec2.new(dungeon_entrance_point.x * _tile_size.x, dungeon_entrance_point.y * _tile_size.y)
-        _dungeon_exit_point = Vec2.new(dungeon_exit_point.x * _tile_size.x, dungeon_exit_point.y * _tile_size.y)
-
         _size = Vec2.new(_grid.width * _tile_size.x, _grid.height * _tile_size.y)
     }
 
-    /*static*/ generate_dungeon_grid(dungeon_size_x, dungeon_size_y, random) {
+    generate_dungeon_grid(dungeon_size_x, dungeon_size_y, random) {
 
         var grid = Grid.new(dungeon_size_x, dungeon_size_y, EnumTile.empty)
 
@@ -276,18 +271,61 @@ class DungeonFractalElement {
             }
         }
 
+
+
+        var start_room = rooms[random.int(0, space_partition_horizontally)]
+        var end_room = rooms[rooms.count - random.int(0, space_partition_horizontally) - 1]
+
+        var dungeon_entrance_tile = Vec2.new(0, start_room.pos.y.floor)
+        var dungeon_exit_tile = Vec2.new(dungeon_size_x, end_room.pos.y.floor)
+
+        _dungeon_entrance_point = Vec2.new(dungeon_entrance_tile.x * _tile_size.x, (dungeon_entrance_tile.y + 0.5) * _tile_size.y)
+        _dungeon_exit_point = Vec2.new(dungeon_exit_tile.x * _tile_size.x, (dungeon_exit_tile.y + 0.5) * _tile_size.y)
+
+        for (x in 0..(start_room.corner_pos.x-1)) {
+
+            if (EnumTile.is_floor(grid[x, dungeon_entrance_tile.y])) continue
+
+            grid[x, dungeon_entrance_tile.y] = EnumTile.floor1
+        }
+
+        for (x in (end_room.corner_pos.x + end_room.size.x)..(dungeon_size_x-1)) {
+
+            if (EnumTile.is_floor(grid[x, dungeon_exit_tile.y])) continue
+
+            grid[x, dungeon_exit_tile.y] = EnumTile.floor1
+        }
+
         
 
         // Generating walls around
-        for (x in 1...grid.width - 1) {
-            for (y in 1...grid.height - 1) {
+        for (x in 0...dungeon_size_x) {
+            for (y in 0...dungeon_size_y) {
 
-                if (grid[x, y] == EnumTile.empty) {
-                    if (EnumTile.is_floor(grid[x - 1, y]) || 
-                        EnumTile.is_floor(grid[x + 1, y]) ||
-                        EnumTile.is_floor(grid[x, y - 1]) ||
-                        EnumTile.is_floor(grid[x, y + 1])) {
+                if (grid[x, y] != EnumTile.empty) continue
 
+                if (grid.coords_are_valid(x-1, y)) {
+                    if (EnumTile.is_floor(grid[x - 1, y])) {
+                        grid[x, y] = EnumTile.wall
+                    }
+                }
+                
+                if (grid.coords_are_valid(x+1, y)) {
+                    if (EnumTile.is_floor(grid[x + 1, y])) {
+                        grid[x, y] = EnumTile.wall
+                    }
+                }
+                
+                
+                if (grid.coords_are_valid(x, y-1)) {
+                    if (EnumTile.is_floor(grid[x, y - 1])) {
+                        grid[x, y] = EnumTile.wall
+                    }
+                }
+
+
+                if (grid.coords_are_valid(x, y+1)) {
+                    if (EnumTile.is_floor(grid[x, y + 1])) {
                         grid[x, y] = EnumTile.wall
                     }
                 }
@@ -325,34 +363,36 @@ class DungeonFractalElement {
     npc_spawn_tiles { _npc_spawn_tiles }
     player_spawn_tile { _player_spawn_tile }
 
+
     get_world_from_tiled_pos(grid_x, grid_y, dungeon_level) {
 
         var i = dungeon_level
-
-        if (i == 0) {
-            var pos = Vec2.new(grid_x * _tile_size.x, grid_y * _tile_size.y)
-            return -pos
-        }
 
         if (i < 0) {
             System.print("Can't get negative scale dungeons")
             return
         }
 
-        var dungeon_scale = convertion_scale.pow(i)
-        var dungeon_pos = Vec2.new(0, 0)
+        var world_pos = Vec2.new(0, 0)
+        var dungeon_scale = convertion_scale.pow(dungeon_level)
+
+        world_pos.x = world_pos.x + (grid_x * _tile_size.x * dungeon_scale)
+        world_pos.y = world_pos.y + (grid_y * _tile_size.y * dungeon_scale)
 
         while (i != 0) {
 
-            var temp_dungeon_scale = convertion_scale.pow(i)
-            var temp_prev_dungeon_scale = convertion_scale.pow(i - 1)
-
-            dungeon_pos = dungeon_pos - (dungeon_exit_point * temp_prev_dungeon_scale) + (dungeon_entrance_point * temp_dungeon_scale)
-
             i = i - 1
+            var temp_dungeon_scale = convertion_scale.pow(i)
+
+            world_pos.x = world_pos.x + (dungeon_exit_point - dungeon_entrance_point).x * temp_dungeon_scale
+            world_pos.y = world_pos.y + (dungeon_exit_point - dungeon_entrance_point).y * temp_dungeon_scale
+
         }
 
-        return dungeon_pos + (Vec2.new(grid_x * _tile_size.x, grid_y * _tile_size.y)) * dungeon_scale
+        world_pos.y = world_pos.y - dungeon_entrance_point.y * convertion_scale.pow(dungeon_level)
+        world_pos.y = world_pos.y + dungeon_entrance_point.y * convertion_scale.pow(0)
+
+        return -world_pos
     }
 
 
@@ -360,31 +400,27 @@ class DungeonFractalElement {
 
         var i = dungeon_level
 
-        if (i == 0) {
-            var pos = Vec2.new(world_pos.x / _tile_size.x, world_pos.y / _tile_size.y)
-            return -pos
-        }
-
         if (i < 0) {
             System.print("Can't get negative scale dungeons")
             return
         }
 
-
-        var dungeon_scale = convertion_scale.pow(i)
-
-        world_pos = world_pos - Vec2.new(world_pos.x / _tile_size.x, world_pos.y / _tile_size.y) / dungeon_scale
+        world_pos = -world_pos
 
         while (i != 0) {
+            i = i - 1
 
             var temp_dungeon_scale = convertion_scale.pow(i)
-            var temp_prev_dungeon_scale = convertion_scale.pow(i - 1)
 
-            world_pos = world_pos + (dungeon_exit_point / temp_prev_dungeon_scale) - (dungeon_entrance_point / temp_dungeon_scale)
-
-            i = i - 1
+            world_pos = world_pos - (dungeon_exit_point - dungeon_entrance_point) * temp_dungeon_scale
         }
 
-        return world_pos
+        world_pos.y = world_pos.y + dungeon_entrance_point.y * convertion_scale.pow(dungeon_level)
+        world_pos.y = world_pos.y - dungeon_entrance_point.y * convertion_scale.pow(0)
+
+        var dungeon_scale = convertion_scale.pow(dungeon_level)
+        var tile_pos = Vec2.new(world_pos.x / tile_size.x, world_pos.y / tile_size.y) / dungeon_scale
+
+        return tile_pos
     }
 }
