@@ -43,6 +43,14 @@
         "type": "number",
         "value": 0.09000000357627869
     },
+    "Player begin damage": {
+        "type": "number",
+        "value": 20.0
+    },
+    "Player begin speed": {
+        "type": "number",
+        "value": 100.0
+    },
     "Player spawn protection": {
         "type": "number",
         "value": 200.0
@@ -53,11 +61,23 @@
     },
     "Relative camera scale": {
         "type": "number",
-        "value": 0.6100000143051147
+        "value": 0.23000000417232513
     },
     "Render empty": {
         "type": "bool",
         "value": false
+    },
+    "Reward damage multiplayer": {
+        "type": "number",
+        "value": 1.0010000467300415
+    },
+    "Reward scale multiplayer": {
+        "type": "number",
+        "value": 1.0010000467300415
+    },
+    "Reward speed multiplayer": {
+        "type": "number",
+        "value": 1.0010000467300415
     },
     "Room size": {
         "type": "number",
@@ -95,12 +115,16 @@
         "type": "number",
         "value": 3.0
     },
+    "Zombie begin speed": {
+        "type": "number",
+        "value": 20.0
+    },
     "Zombie cooldown attack": {
         "type": "number",
         "value": 2.0
     },
     "Zombie view distance": {
         "type": "number",
-        "value": 100.0
+        "value": 150.0
     }
 }

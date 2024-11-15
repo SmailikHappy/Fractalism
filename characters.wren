@@ -8,7 +8,7 @@ import "collision" for BoxCollider
 
 
 class Player {
-    construct new(pos, scale, speed, dungeon_level, collider, sprite_info) {
+    construct new(pos, scale, speed, damage, dungeon_level, collider, sprite_info) {
         _pos = pos
         _scale = scale
         _speed = speed
@@ -20,6 +20,7 @@ class Player {
         _state = PlayerState.no_attack
 
         _hp = 100
+        _dmg = damage
     }
 
     pos { _pos }
@@ -37,6 +38,8 @@ class Player {
     state { _state }
     state=(v) { _state = v }
     hp { _hp }
+    dmg { _dmg * scale }
+    dmg=(v) { _dmg = v }
 
     receive_dmg(v) { _hp = _hp - v }
     heal(v) { _hp = _hp + v }
@@ -86,12 +89,12 @@ class Zombie {
     cooldown { _cooldown }
     cooldown=(v) { _cooldown = v }
     collider { _collider }
-    dmg { _dmg }
-    speed { _speed }
+    dmg { _dmg * _scale }
+    speed { _speed * _scale}
 
 // Interaction
     receive_dmg(damage) {
-        _hp = _hp - damage
+        _hp = _hp - damage / scale
     }
     is_alive {
         if (_hp > 0) {

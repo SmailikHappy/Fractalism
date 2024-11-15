@@ -35,7 +35,7 @@ class Game {
 
         __camera = Camera.new(Vec2.new(0,0), 1.0)
 
-        __dungeon = DungeonFractalElement.new(2, dungeon_width, dungeon_height, __random)
+        __dungeon = DungeonFractalElement.new(1.2, dungeon_width, dungeon_height, __random)
 
         init_life(tile_set_image, tile_set_columns, tile_set_rows)
 
@@ -59,7 +59,6 @@ class Game {
 
         __camera.pos = Math.lerp(__camera.pos, __player.pos, dt * Data.getNumber("Camera attachment force", Data.game))
         __camera.scale = __player.scale * Data.getNumber("Relative camera scale", Data.game)
-        __player.speed = Data.getNumber("Player speed", Data.game)
     }
 
     static render() {
@@ -243,13 +242,17 @@ class Game {
             }
 
             // Damage receive from the player
-            if (__player.state == PlayerState.attack && (zombie.pos - __player.pos).magnitude <= 30) {
-                zombie.receive_dmg(20)
+            if (__player.state == PlayerState.attack && (zombie.pos - __player.pos).magnitude <= 30 * __player.scale) {
+                zombie.receive_dmg(__player.dmg)
             }
 
             // is being killed?
             if (!zombie.is_alive) {
                 zombie.sprite_info.mul = Color.new(255, 0, 0).toNum
+
+                __player.speed = __player.speed * Data.getNumber("Reward speed multiplayer", Data.game)
+                __player.dmg = __player.dmg * Data.getNumber("Reward damage multiplayer", Data.game)
+                __player.scale = __player.scale * Data.getNumber("Reward scale multiplayer", Data.game)
             }
         }
         
@@ -288,7 +291,8 @@ class Game {
         __player = Player.new(
             __dungeon.get_world_from_tiled_pos(__dungeon.player_spawn_tile.x + 0.5, __dungeon.player_spawn_tile.y + 0.5, 0),
             1.0,
-            Data.getNumber("Player speed", Data.game),
+            Data.getNumber("Player begin speed", Data.game),
+            Data.getNumber("Player begin damage", Data.game),
             0,
             BoxCollider.new(Vec2.new(12, 12)),
             ModdedSprite.new(Render.createGridSprite(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows, 26, 0), Color.new(255, 255, 255, 255).toNum, 0x00, Render.spriteCenter)
@@ -298,7 +302,7 @@ class Game {
         Zombie.set_defaults(
             BoxCollider.new(Vec2.new(12, 12)),
             20,
-            Data.getNumber("Player speed", Data.game) * 0.6,
+            Data.getNumber("Zombie begin speed", Data.game),
             1.0,
             ModdedSprite.new(Render.createGridSprite(sprite_sheet, sprite_sheet_columns, sprite_sheet_rows, 25, 2), Color.new(255, 255, 255, 255).toNum, 0x00, Render.spriteCenter)
         )

@@ -14,12 +14,12 @@ class Camera {
 
     apply_translation(input_pos) {
         input_pos = input_pos + _pos
-        input_pos = input_pos * _scale
+        input_pos = input_pos / _scale
         return input_pos
     }
 
     apply_scale(input_scale) {
-        input_scale = input_scale * _scale
+        input_scale = input_scale / _scale
         return input_scale 
     }
 }
