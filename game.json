@@ -17,19 +17,19 @@
     },
     "Dungeon height": {
         "type": "number",
-        "value": 66.0
+        "value": 46.0
     },
     "Dungeon width": {
         "type": "number",
-        "value": 106.0
+        "value": 66.0
     },
     "Horizontal dungeon partition": {
         "type": "number",
-        "value": 5.0
+        "value": 4.0
     },
     "Max room size": {
         "type": "number",
-        "value": 12.0
+        "value": 10.0
     },
     "Min room size": {
         "type": "number",
@@ -55,10 +55,6 @@
         "type": "number",
         "value": 200.0
     },
-    "Player speed": {
-        "type": "number",
-        "value": 750.0
-    },
     "Relative camera scale": {
         "type": "number",
         "value": 0.23000000417232513
@@ -78,10 +74,6 @@
     "Reward speed multiplayer": {
         "type": "number",
         "value": 1.0010000467300415
-    },
-    "Room size": {
-        "type": "number",
-        "value": 5.0
     },
     "Room spawn probability": {
         "type": "number",
@@ -113,7 +105,7 @@
     },
     "Vertical dungeon partition": {
         "type": "number",
-        "value": 3.0
+        "value": 2.0
     },
     "Zombie begin speed": {
         "type": "number",
